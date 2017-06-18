@@ -12,7 +12,7 @@ The solution used the same model as described in "Mind The Line" tutorial in les
 Namely, we have 6 states and 2 actuators in our model:
 
 - State: x, y, psi, v, cte, epsi
-Actuator: steering, spped
+- Actuator: steering, spped
 
 Then we define a cost function, which is a weighted sum of various factors we want to minimize, for example: 
 
