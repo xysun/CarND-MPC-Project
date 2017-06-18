@@ -3,6 +3,66 @@ Self-Driving Car Engineer Nanodegree Program
 
 ---
 
+## Reflections
+
+### Model
+
+The solution used the same model as described in "Mind The Line" tutorial in lessons. 
+
+Namely, we have 6 states and 2 actuators in our model:
+
+- State: x, y, psi, v, cte, epsi
+Actuator: steering, spped
+
+Then we define a cost function, which is a weighted sum of various factors we want to minimize, for example: 
+
+- distance to the referenced central line
+- no drastic changes in steering/speed
+- no significant values of steering/speed. 
+
+Then in each measurement update, we use an optimizer to minimize the cost, with the constraint expressed as motion update models: 
+
+```
+x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
+y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
+psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
+v_[t+1] = v[t] + a[t] * dt
+cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
+epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
+```
+
+We constraint by asserting that left - right = 0 in all above equations. 
+
+Latency handling is described below. 
+
+### How to pick dt and N
+
+I started with the values in the video (N = 10, dt = 0.1). 
+
+I tried larger N values but found they did not work so well -- they tend to "over-predict" the future and hence overshoot, especially in sharp turns. 
+
+For dt, once I incorporated latency (see below), I adjusted dt up to 0.15, so that the solver is actually optimizing a time period beyond when model thinks there's no change in steering/speed. 
+
+
+### How latency is handled
+
+Latency is handled by upon receiving measurements, we "forward" the car using current control values (steer and speed) for the duration of latency.
+
+The update equations used are: 
+
+```
+double latency = 0.1;
+px = px + v * cos(psi) * latency;
+py = py + v * sin(psi) * latency;
+psi = psi - v*steer_value/Lf*latency; // simulator gives back negative steering!
+v += throttle_value*latency;
+```
+
+Then these values are feeded into Solver. 
+
+
+---
+Original README below
 ## Dependencies
 
 * cmake >= 3.5
