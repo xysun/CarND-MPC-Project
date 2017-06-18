@@ -92,14 +92,29 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
+          double steer_value = j[1]["steering_angle"]; 
+          double throttle_value = j[1]["throttle"];
+
+          // simulate delay
+          // x_[t+1] = x[t] + v[t] * cos(psi[t]) * dt
+          // y_[t+1] = y[t] + v[t] * sin(psi[t]) * dt
+          // psi_[t+1] = psi[t] + v[t] / Lf * delta[t] * dt
+          // v_[t+1] = v[t] + a[t] * dt
+          double Lf = 2.67;
+
+          double latency = 0.1;
+          px = px + v * cos(psi) * latency;
+          py = py + v * sin(psi) * latency;
+          psi = psi - v*steer_value/Lf*latency; // negative steering!
+          v += throttle_value*latency;
+
           /*
           * TODO: Calculate steering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
-          double steer_value = j[1]["steering_angle"];
-          double throttle_value = j[1]["throttle"];
+          
 
           for (int i = 0; i < ptsx.size(); i++){
             double shift_x = ptsx[i] - px;
@@ -118,9 +133,10 @@ int main() {
           auto coeffs = polyfit(ptsx_transform, ptsy_transform, 3);
 
           double cte = polyeval(coeffs, 0);
-          double epsi =  -atan(coeffs[1]);
+          double epsi =  psi - atan(coeffs[1] + 2 * px * coeffs[2] + 3 * coeffs[3] *pow(px,2));
 
           Eigen::VectorXd state(6);
+
           state << 0, 0, 0, v, cte, epsi;
 
           auto vars = mpc.Solve(state, coeffs);
@@ -146,8 +162,6 @@ int main() {
               mpc_y_vals.push_back(vars[i]);
             }
           }
-
-          double Lf = 2.67;
 
           
           json msgJson;
@@ -180,7 +194,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(0));
+          this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
